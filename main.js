@@ -7,12 +7,27 @@
 // ============================================
 
 /**
+ * GAS Web App URL（設定画面で設定）
+ */
+let GAS_WEB_APP_URL = '';
+
+/**
+ * スプレッドシート連携の有効/無効フラグ
+ */
+let SPREADSHEET_ENABLED = false;
+
+/**
  * localStorageからデータを取得
  * @param {string} key - データのキー
  * @param {any} defaultValue - デフォルト値
  * @returns {any} 取得したデータ
  */
 function getStorageData(key, defaultValue = null) {
+    // ブラウザ環境チェック
+    if (typeof localStorage === 'undefined') {
+        return defaultValue;
+    }
+    
     try {
         const data = localStorage.getItem(key);
         return data ? JSON.parse(data) : defaultValue;
@@ -28,11 +43,19 @@ function getStorageData(key, defaultValue = null) {
  * @param {any} value - 保存するデータ
  */
 function setStorageData(key, value) {
+    // ブラウザ環境チェック
+    if (typeof localStorage === 'undefined') {
+        console.warn('localStorage is not available. Cannot save data.');
+        return;
+    }
+    
     try {
         localStorage.setItem(key, JSON.stringify(value));
     } catch (error) {
         console.error(`Error setting data to localStorage (${key}):`, error);
-        alert('データの保存に失敗しました。');
+        if (typeof alert !== 'undefined') {
+            alert('データの保存に失敗しました。');
+        }
     }
 }
 
@@ -40,6 +63,12 @@ function setStorageData(key, value) {
  * 初期データの設定（初回起動時のみ）
  */
 function initializeData() {
+    // ブラウザ環境チェック
+    if (typeof localStorage === 'undefined') {
+        console.warn('localStorage is not available. Running in non-browser environment.');
+        return;
+    }
+
     // カテゴリの初期化
     const categories = getStorageData('expenseTracker:categories', ['食費', '交通', '光熱費', 'その他']);
     setStorageData('expenseTracker:categories', categories);
@@ -56,6 +85,174 @@ function initializeData() {
         paymentMethod: 'ALL'
     });
     setStorageData('expenseTracker:filters', filters);
+
+    // スプレッドシート連携の設定を読み込み
+    GAS_WEB_APP_URL = getStorageData('expenseTracker:gasUrl', '');
+    SPREADSHEET_ENABLED = getStorageData('expenseTracker:spreadsheetEnabled', false);
+}
+
+// ============================================
+// スプレッドシート連携: Google Apps Script API
+// ============================================
+
+/**
+ * スプレッドシートからレコードを取得
+ * @returns {Promise<Array>} レコード配列
+ */
+async function fetchRecordsFromSpreadsheet() {
+    if (!SPREADSHEET_ENABLED || !GAS_WEB_APP_URL) {
+        return null;
+    }
+
+    try {
+        const response = await fetch(GAS_WEB_APP_URL);
+        const data = await response.json();
+        if (data.success) {
+            return data.records;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error fetching records from spreadsheet:', error);
+        return null;
+    }
+}
+
+/**
+ * スプレッドシートにレコードを追加
+ * @param {Object} record - レコードオブジェクト
+ * @returns {Promise<boolean>} 成功フラグ
+ */
+async function addRecordToSpreadsheet(record) {
+    if (!SPREADSHEET_ENABLED || !GAS_WEB_APP_URL) {
+        return false;
+    }
+
+    try {
+        const response = await fetch(GAS_WEB_APP_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'add',
+                record: record
+            })
+        });
+        const data = await response.json();
+        return data.success;
+    } catch (error) {
+        console.error('Error adding record to spreadsheet:', error);
+        return false;
+    }
+}
+
+/**
+ * スプレッドシートのレコードを更新
+ * @param {Object} record - レコードオブジェクト
+ * @returns {Promise<boolean>} 成功フラグ
+ */
+async function updateRecordInSpreadsheet(record) {
+    if (!SPREADSHEET_ENABLED || !GAS_WEB_APP_URL) {
+        return false;
+    }
+
+    try {
+        const response = await fetch(GAS_WEB_APP_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'update',
+                record: record
+            })
+        });
+        const data = await response.json();
+        return data.success;
+    } catch (error) {
+        console.error('Error updating record in spreadsheet:', error);
+        return false;
+    }
+}
+
+/**
+ * スプレッドシートからレコードを削除
+ * @param {string} id - レコードID
+ * @returns {Promise<boolean>} 成功フラグ
+ */
+async function deleteRecordFromSpreadsheet(id) {
+    if (!SPREADSHEET_ENABLED || !GAS_WEB_APP_URL) {
+        return false;
+    }
+
+    try {
+        const response = await fetch(GAS_WEB_APP_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'delete',
+                id: id
+            })
+        });
+        const data = await response.json();
+        return data.success;
+    } catch (error) {
+        console.error('Error deleting record from spreadsheet:', error);
+        return false;
+    }
+}
+
+/**
+ * スプレッドシートに全レコードを同期
+ * @param {Array<Object>} records - レコード配列
+ * @returns {Promise<boolean>} 成功フラグ
+ */
+async function syncRecordsToSpreadsheet(records) {
+    if (!SPREADSHEET_ENABLED || !GAS_WEB_APP_URL) {
+        return false;
+    }
+
+    try {
+        const response = await fetch(GAS_WEB_APP_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'sync',
+                records: records
+            })
+        });
+        const data = await response.json();
+        return data.success;
+    } catch (error) {
+        console.error('Error syncing records to spreadsheet:', error);
+        return false;
+    }
+}
+
+/**
+ * スプレッドシートからデータを読み込んでlocalStorageに保存
+ * @returns {Promise<boolean>} 成功フラグ
+ */
+async function loadFromSpreadsheet() {
+    if (!SPREADSHEET_ENABLED || !GAS_WEB_APP_URL) {
+        return false;
+    }
+
+    try {
+        const records = await fetchRecordsFromSpreadsheet();
+        if (records) {
+            setStorageData('expenseTracker:records', records);
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error loading from spreadsheet:', error);
+        return false;
+    }
 }
 
 // ============================================
@@ -66,7 +263,7 @@ function initializeData() {
  * 支出レコードを追加
  * @param {Object} expenseData - 支出データ
  */
-function addExpense(expenseData) {
+async function addExpense(expenseData) {
     const records = getStorageData('expenseTracker:records', []);
     const newExpense = {
         id: generateId(),
@@ -78,6 +275,12 @@ function addExpense(expenseData) {
     };
     records.push(newExpense);
     setStorageData('expenseTracker:records', records);
+    
+    // スプレッドシートにも保存
+    if (SPREADSHEET_ENABLED) {
+        await addRecordToSpreadsheet(newExpense);
+    }
+    
     return newExpense;
 }
 
@@ -86,7 +289,7 @@ function addExpense(expenseData) {
  * @param {string} id - レコードID
  * @param {Object} expenseData - 更新データ
  */
-function updateExpense(id, expenseData) {
+async function updateExpense(id, expenseData) {
     const records = getStorageData('expenseTracker:records', []);
     const index = records.findIndex(record => record.id === id);
     if (index !== -1) {
@@ -99,6 +302,12 @@ function updateExpense(id, expenseData) {
             memo: expenseData.memo || ''
         };
         setStorageData('expenseTracker:records', records);
+        
+        // スプレッドシートも更新
+        if (SPREADSHEET_ENABLED) {
+            await updateRecordInSpreadsheet(records[index]);
+        }
+        
         return records[index];
     }
     return null;
@@ -108,10 +317,15 @@ function updateExpense(id, expenseData) {
  * 支出レコードを削除
  * @param {string} id - レコードID
  */
-function deleteExpense(id) {
+async function deleteExpense(id) {
     const records = getStorageData('expenseTracker:records', []);
     const filteredRecords = records.filter(record => record.id !== id);
     setStorageData('expenseTracker:records', filteredRecords);
+    
+    // スプレッドシートからも削除
+    if (SPREADSHEET_ENABLED) {
+        await deleteRecordFromSpreadsheet(id);
+    }
 }
 
 /**
@@ -409,10 +623,10 @@ function renderExpenseList() {
     });
 
     document.querySelectorAll('.btn-delete').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             const id = btn.getAttribute('data-id');
             if (confirm('この支出を削除しますか？')) {
-                deleteExpense(id);
+                await deleteExpense(id);
                 renderExpenseList();
                 updateTotalAmount();
                 renderSummary();
@@ -531,11 +745,13 @@ function setupEventListeners() {
             return;
         }
 
-        addExpense(expenseData);
-        expenseForm.reset();
-        renderExpenseList();
-        updateTotalAmount();
-        renderSummary();
+        (async () => {
+            await addExpense(expenseData);
+            expenseForm.reset();
+            renderExpenseList();
+            updateTotalAmount();
+            renderSummary();
+        })();
     });
 
     // カテゴリ追加
@@ -600,7 +816,7 @@ function setupEventListeners() {
 
     // 編集フォーム
     const editForm = document.getElementById('editForm');
-    editForm.addEventListener('submit', (e) => {
+    editForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData(editForm);
         const id = formData.get('id');
@@ -612,7 +828,8 @@ function setupEventListeners() {
             memo: formData.get('memo')
         };
 
-        if (updateExpense(id, expenseData)) {
+        const result = await updateExpense(id, expenseData);
+        if (result) {
             closeEditModal();
             renderExpenseList();
             updateTotalAmount();
@@ -636,6 +853,22 @@ function setupEventListeners() {
             addCategoryBtn.click();
         }
     });
+
+    // 設定保存
+    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+    if (saveSettingsBtn) {
+        saveSettingsBtn.addEventListener('click', () => {
+            saveSpreadsheetSettings();
+        });
+    }
+
+    // スプレッドシートに同期
+    const syncToSpreadsheetBtn = document.getElementById('syncToSpreadsheetBtn');
+    if (syncToSpreadsheetBtn) {
+        syncToSpreadsheetBtn.addEventListener('click', async () => {
+            await syncToSpreadsheet();
+        });
+    }
 }
 
 // ============================================
@@ -645,9 +878,23 @@ function setupEventListeners() {
 /**
  * アプリケーションの初期化
  */
-function init() {
+async function init() {
+    // ブラウザ環境チェック
+    if (typeof document === 'undefined') {
+        console.warn('document is not available. Running in non-browser environment.');
+        return;
+    }
+
     // データの初期化
     initializeData();
+
+    // スプレッドシートからデータを読み込む（有効な場合）
+    if (SPREADSHEET_ENABLED && GAS_WEB_APP_URL) {
+        const loaded = await loadFromSpreadsheet();
+        if (loaded) {
+            console.log('データをスプレッドシートから読み込みました');
+        }
+    }
 
     // 日付フィールドのデフォルト値を今日に設定
     const today = new Date().toISOString().split('T')[0];
@@ -672,10 +919,68 @@ function init() {
     document.getElementById('filterCategory').value = filters.category;
     document.getElementById('filterPaymentMethod').value = filters.paymentMethod;
 
+    // 設定UIの更新
+    updateSettingsUI();
+
     // イベントリスナーの設定
     setupEventListeners();
 }
 
-// ページ読み込み時に初期化
-document.addEventListener('DOMContentLoaded', init);
+/**
+ * 設定UIを更新
+ */
+function updateSettingsUI() {
+    const gasUrlInput = document.getElementById('gasUrlInput');
+    const spreadsheetEnabledCheckbox = document.getElementById('spreadsheetEnabled');
+    
+    if (gasUrlInput) {
+        gasUrlInput.value = GAS_WEB_APP_URL;
+    }
+    if (spreadsheetEnabledCheckbox) {
+        spreadsheetEnabledCheckbox.checked = SPREADSHEET_ENABLED;
+    }
+}
+
+/**
+ * スプレッドシート設定を保存
+ */
+function saveSpreadsheetSettings() {
+    const gasUrlInput = document.getElementById('gasUrlInput');
+    const spreadsheetEnabledCheckbox = document.getElementById('spreadsheetEnabled');
+    
+    if (gasUrlInput && spreadsheetEnabledCheckbox) {
+        GAS_WEB_APP_URL = gasUrlInput.value.trim();
+        SPREADSHEET_ENABLED = spreadsheetEnabledCheckbox.checked;
+        
+        setStorageData('expenseTracker:gasUrl', GAS_WEB_APP_URL);
+        setStorageData('expenseTracker:spreadsheetEnabled', SPREADSHEET_ENABLED);
+        
+        alert('設定を保存しました。');
+    }
+}
+
+/**
+ * スプレッドシートに全データを同期
+ */
+async function syncToSpreadsheet() {
+    if (!SPREADSHEET_ENABLED || !GAS_WEB_APP_URL) {
+        alert('スプレッドシート連携が有効になっていません。設定を確認してください。');
+        return;
+    }
+    
+    const records = getStorageData('expenseTracker:records', []);
+    const success = await syncRecordsToSpreadsheet(records);
+    
+    if (success) {
+        alert('スプレッドシートに同期しました。');
+    } else {
+        alert('スプレッドシートへの同期に失敗しました。');
+    }
+}
+
+// ページ読み込み時に初期化（ブラウザ環境のみ）
+if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', init);
+}
+
 

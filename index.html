@@ -127,12 +127,34 @@
                 <!-- 支出レコードはJavaScriptで動的に追加 -->
             </div>
         </section>
+
+        <!-- スプレッドシート連携設定 -->
+        <section class="settings-section">
+            <h2>スプレッドシート連携設定</h2>
+            <div class="settings-content">
+                <div class="form-group">
+                    <label for="spreadsheetEnabled">
+                        <input type="checkbox" id="spreadsheetEnabled" name="spreadsheetEnabled">
+                        スプレッドシート連携を有効にする
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="gasUrlInput">GAS Web App URL</label>
+                    <input type="url" id="gasUrlInput" name="gasUrl" placeholder="https://script.google.com/macros/s/..." style="width: 100%;">
+                    <small>Google Apps ScriptをWebアプリとして公開したURLを入力してください</small>
+                </div>
+                <div class="settings-actions">
+                    <button type="button" id="saveSettingsBtn" class="btn btn-primary">設定を保存</button>
+                    <button type="button" id="syncToSpreadsheetBtn" class="btn btn-secondary">スプレッドシートに同期</button>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- フッター: データ保存方法の説明、リセットボタン -->
     <footer class="footer">
         <div class="footer-info">
-            <p>データはブラウザのlocalStorageに保存されます。ブラウザのデータを削除すると記録も消えます。</p>
+            <p>データはブラウザのlocalStorageに保存されます。スプレッドシート連携を有効にすると、クラウドにも保存されます。</p>
         </div>
         <button type="button" id="resetAllBtn" class="btn btn-danger">全データリセット</button>
     </footer>
@@ -183,4 +205,5 @@
     <script src="main.js"></script>
 </body>
 </html>
+
 
