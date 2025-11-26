@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>支出記録アプリ</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ヘッダー: アプリ名と合計支出サマリー -->
+    <header class="header">
+        <h1>支出記録アプリ</h1>
+        <div class="summary">
+            <span class="summary-label">合計支出:</span>
+            <span class="summary-amount" id="totalAmount">¥0</span>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <!-- 入力フォーム: 日付・カテゴリ・決済方法・金額・メモ入力 -->
+        <section class="input-section">
+            <h2>支出を追加</h2>
+            <form id="expenseForm" class="expense-form">
+                <div class="form-group">
+                    <label for="expenseDate">日付</label>
+                    <input type="date" id="expenseDate" name="date" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="expenseCategory">カテゴリ</label>
+                    <select id="expenseCategory" name="category" required>
+                        <!-- カテゴリはJavaScriptで動的に追加 -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="expensePaymentMethod">決済方法</label>
+                    <select id="expensePaymentMethod" name="paymentMethod" required>
+                        <option value="現金">現金</option>
+                        <option value="クレジットカード">クレジットカード</option>
+                        <option value="デビットカード">デビットカード</option>
+                        <option value="電子マネー">電子マネー</option>
+                        <option value="QRコード決済">QRコード決済</option>
+                        <option value="銀行振込">銀行振込</option>
+                        <option value="その他">その他</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="expenseAmount">金額</label>
+                    <input type="number" id="expenseAmount" name="amount" min="0" step="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="expenseMemo">メモ（任意）</label>
+                    <input type="text" id="expenseMemo" name="memo" placeholder="メモを入力">
+                </div>
+
+                <button type="submit" class="btn btn-primary">追加</button>
+            </form>
+        </section>
+
+        <!-- カテゴリ管理: カテゴリ追加・削除機能 -->
+        <section class="category-section">
+            <h2>カテゴリ管理</h2>
+            <div class="category-add">
+                <input type="text" id="newCategoryInput" placeholder="新しいカテゴリ名">
+                <button type="button" id="addCategoryBtn" class="btn btn-secondary">カテゴリ追加</button>
+            </div>
+            <div class="category-list" id="categoryList">
+                <!-- カテゴリ一覧はJavaScriptで動的に追加 -->
+            </div>
+        </section>
+
+        <!-- フィルタ/集計パネル: 日付範囲・カテゴリ・決済方法フィルタ -->
+        <section class="filter-section">
+            <h2>フィルタ・集計</h2>
+            <div class="filter-group">
+                <div class="form-group">
+                    <label for="filterFromDate">開始日</label>
+                    <input type="date" id="filterFromDate" name="fromDate">
+                </div>
+                <div class="form-group">
+                    <label for="filterToDate">終了日</label>
+                    <input type="date" id="filterToDate" name="toDate">
+                </div>
+                <div class="form-group">
+                    <label for="filterCategory">カテゴリ</label>
+                    <select id="filterCategory" name="category">
+                        <option value="ALL">すべて</option>
+                        <!-- カテゴリはJavaScriptで動的に追加 -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filterPaymentMethod">決済方法</label>
+                    <select id="filterPaymentMethod" name="paymentMethod">
+                        <option value="ALL">すべて</option>
+                        <option value="現金">現金</option>
+                        <option value="クレジットカード">クレジットカード</option>
+                        <option value="デビットカード">デビットカード</option>
+                        <option value="電子マネー">電子マネー</option>
+                        <option value="QRコード決済">QRコード決済</option>
+                        <option value="銀行振込">銀行振込</option>
+                        <option value="その他">その他</option>
+                    </select>
+                </div>
+                <button type="button" id="applyFilterBtn" class="btn btn-secondary">フィルタ適用</button>
+                <button type="button" id="resetFilterBtn" class="btn btn-secondary">リセット</button>
+            </div>
+
+            <!-- 月次集計表示 -->
+            <div class="summary-panel">
+                <h3>月次集計</h3>
+                <div id="monthlyCategorySummary" class="summary-content">
+                    <!-- カテゴリ別集計はJavaScriptで動的に追加 -->
+                </div>
+                <div id="monthlyPaymentSummary" class="summary-content">
+                    <!-- 決済方法別集計はJavaScriptで動的に追加 -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 支出リスト: レコード一覧（編集・削除ボタン付き） -->
+        <section class="list-section">
+            <h2>支出リスト</h2>
+            <div id="expenseList" class="expense-list">
+                <!-- 支出レコードはJavaScriptで動的に追加 -->
+            </div>
+        </section>
+    </main>
+
+    <!-- フッター: データ保存方法の説明、リセットボタン -->
+    <footer class="footer">
+        <div class="footer-info">
+            <p>データはブラウザのlocalStorageに保存されます。ブラウザのデータを削除すると記録も消えます。</p>
+        </div>
+        <button type="button" id="resetAllBtn" class="btn btn-danger">全データリセット</button>
+    </footer>
+
+    <!-- 編集用モーダルダイアログ -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>支出を編集</h2>
+            <form id="editForm" class="expense-form">
+                <input type="hidden" id="editId" name="id">
+                <div class="form-group">
+                    <label for="editDate">日付</label>
+                    <input type="date" id="editDate" name="date" required>
+                </div>
+                <div class="form-group">
+                    <label for="editCategory">カテゴリ</label>
+                    <select id="editCategory" name="category" required>
+                        <!-- カテゴリはJavaScriptで動的に追加 -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editPaymentMethod">決済方法</label>
+                    <select id="editPaymentMethod" name="paymentMethod" required>
+                        <option value="現金">現金</option>
+                        <option value="クレジットカード">クレジットカード</option>
+                        <option value="デビットカード">デビットカード</option>
+                        <option value="電子マネー">電子マネー</option>
+                        <option value="QRコード決済">QRコード決済</option>
+                        <option value="銀行振込">銀行振込</option>
+                        <option value="その他">その他</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editAmount">金額</label>
+                    <input type="number" id="editAmount" name="amount" min="0" step="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="editMemo">メモ（任意）</label>
+                    <input type="text" id="editMemo" name="memo" placeholder="メモを入力">
+                </div>
+                <button type="submit" class="btn btn-primary">更新</button>
+                <button type="button" class="btn btn-secondary close-modal">キャンセル</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
+
